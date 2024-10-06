@@ -78,7 +78,7 @@ const ResultPage = () => {
 
   return (
     <div className="result-container">
-      {/* Remove this h1 if you don't want the "API Result for ID" text */}
+      {/* Remove this h1 if you don't want the "API Result for ID" text ----*/}
       {/* <h1>Brand Assessment Result for: {websiteUrl}</h1> */}
 
       {data && data.body && data.body.newQuestions ? (
