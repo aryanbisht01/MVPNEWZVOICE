@@ -5,25 +5,32 @@ const ResultPage = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  let assessmentId = null; // Declare a variable to store the id
+  const [id, setId] = useState(null); // State to store the id from the first API
 
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const websiteUrl = params.get("url");
 
+  // First API call to get the ID
   useEffect(() => {
     if (websiteUrl) {
       const encodedUrl = encodeURIComponent(websiteUrl);
-      const proxyUrl = "https://api.allorigins.win/get?url=";
       const targetUrl = `https://kcvjp07281.execute-api.us-east-1.amazonaws.com/getBrandData?url=${encodedUrl}`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
+        targetUrl
+      )}`;
 
-      fetch(proxyUrl + targetUrl)
+      fetch(proxyUrl)
         .then((response) => response.json())
         .then((result) => {
-          // Parse the 'contents' field into JSON
-          const parsedData = JSON.parse(result.contents).body;
-          setData(parsedData);
-          setLoading(false);
+          const parsedData = result.contents
+            ? JSON.parse(result.contents).body
+            : null;
+
+          // Store the id from the first API
+          if (parsedData && parsedData.id) {
+            setId(parsedData.id); // Save the id to the state
+          }
         })
         .catch((err) => {
           setError(err.message);
@@ -31,6 +38,35 @@ const ResultPage = () => {
         });
     }
   }, [websiteUrl]);
+
+  // Second API call to use the ID and get the additional data
+  useEffect(() => {
+    if (id) {
+      const secondApiUrl = `https://kcvjp07281.execute-api.us-east-1.amazonaws.com/getBrandData?isLoggedIn=true&id=${id}`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
+        secondApiUrl
+      )}`;
+
+      fetch(proxyUrl)
+        .then((response) => {
+          if (response.status === 403) {
+            throw new Error("Access Forbidden: CORS or server restriction.");
+          }
+          return response.json();
+        })
+        .then((result) => {
+          const parsedData = result.contents
+            ? JSON.parse(result.contents)
+            : null;
+          setData(parsedData); // Save the result of the second API
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    }
+  }, [id]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -42,12 +78,17 @@ const ResultPage = () => {
 
   return (
     <div className="result-container">
-      <h1>Brand Assessment Result for: {websiteUrl}</h1>
-      {data && data.newQuestions ? (
+      {/* Remove this h1 if you don't want the "API Result for ID" text */}
+      {/* <h1>Brand Assessment Result for: {websiteUrl}</h1> */}
+
+      {data && data.body && data.body.newQuestions ? (
         <div className="questions-list">
-          {data.newQuestions.map((item, index) => (
+          {data.body.newQuestions.map((item, index) => (
             <div key={index} className="question-answer">
-              <h3>Question: {item.question}</h3>
+              {/* Numbered questions */}
+              <h3>
+                {index + 1}. Question: {item.question}
+              </h3>
               <p>Answer: {item.answer}</p>
             </div>
           ))}
